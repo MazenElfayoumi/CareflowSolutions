@@ -10,8 +10,8 @@ st.caption("Reconcile bills between Bank (Check Details) PDF and Website (Electr
 
 with st.sidebar:
     st.header("Inputs")
-    bank_file = st.file_uploader("Bank File (Check Details PDF)", type=["pdf"], key="bank")
-    web_file = st.file_uploader("Website File (Remittance Advice PDF)", type=["pdf"], key="web")
+    bank_file = st.file_uploader("Insurance File ", type=["pdf"], key="bank")
+    web_file = st.file_uploader("Prompt File ", type=["pdf"], key="web")
     
     if "folder_path" not in st.session_state:
         st.session_state["folder_path"] = ""
