@@ -16,23 +16,12 @@ with st.sidebar:
     if "folder_path" not in st.session_state:
         st.session_state["folder_path"] = ""
         
-    out_col1, out_col2 = st.columns([3, 1])
-    with out_col1:
-        output_dir = st.text_input("Output Folder", value=st.session_state["folder_path"], help="If provided, report is automatically saved here.")
-    with out_col2:
-        st.write("")
-        st.write("")
-        if st.button("📂"):
-            import tkinter as tk
-            from tkinter import filedialog
-            root = tk.Tk()
-            root.attributes('-topmost', True)
-            root.withdraw()
-            selected_path = filedialog.askdirectory(master=root, title="Select Output Folder")
-            root.destroy()
-            if selected_path:
-                st.session_state["folder_path"] = selected_path
-                st.rerun()
+    output_dir = st.text_input(
+        "Output Folder (server path)",
+        value=st.session_state["folder_path"],
+        help="Optional. Saves report on the app server. Leave blank and use Download to save on your device."
+    )
+    st.caption("You could optionally put selected folder path here before running the reconciliation or simply run without it and use Download.")
 
     run_btn = st.button("Reconcile Files", type="primary", use_container_width=True)
 
