@@ -104,10 +104,10 @@ def render_transaction_matcher_ui() -> None:
 
     with st.sidebar:
         st.header("Inputs")
-        chase1_file = st.file_uploader("Chase File 1 (required)", type=SUPPORTED_TYPES, key="tm_chase1")
-        chase2_file = st.file_uploader("Chase File 2 (optional)", type=SUPPORTED_TYPES, key="tm_chase2")
+        chase1_file = st.file_uploader("chase deposits (required)", type=SUPPORTED_TYPES, key="tm_chase1")
+        chase2_file = st.file_uploader("quickbox deposits (optional)", type=SUPPORTED_TYPES, key="tm_chase2")
         collections_file = st.file_uploader(
-            "Collections File (required)",
+            "prompt collection report (required)",
             type=SUPPORTED_TYPES,
             key="tm_collections",
         )
@@ -127,7 +127,7 @@ def render_transaction_matcher_ui() -> None:
 
     if run_clicked:
         if not chase1_file or not collections_file:
-            st.error("Chase File 1 and Collections File are required.")
+            st.error("chase deposits and prompt collection report are required.")
         else:
             with st.spinner("Matching transactions..."):
                 try:
