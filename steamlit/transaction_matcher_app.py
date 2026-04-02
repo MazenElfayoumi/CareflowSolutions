@@ -68,41 +68,77 @@ class TransactionMatcher:
             if self.report_file and self.report_file.exists():
                 logger.info("Loading second Chase file: %s", self.report_file)
                 report_df = pd.read_excel(self.report_file, header=4)
-                if "Org Name" in report_df.columns:
-                    report_df["Org Name"] = report_df["Org Name"].ffill()
-                if "Date" in report_df.columns and "Amount" in report_df.columns:
-                    report_df = report_df[~(report_df["Date"].isna() & report_df["Amount"].isna())]
-                amount_list, ref_list = [], []
-                for _, row in report_df.iterrows():
-                    raw = row.get("Amount", "")
-                    if pd.isna(raw):
-                        amount_list.append(None)
-                        ref_list.append("")
-                        continue
-                    s = str(raw).strip()
-                    parts = s.split()
-                    if len(parts) >= 2:
-                        try:
-                            amount_list.append(float(parts[0].replace(",", "").replace("$", "")))
-                            ref_list.append(parts[1])
-                        except (ValueError, TypeError):
+                report_df.columns = report_df.columns.str.strip()
+
+                # --- Auto-detect format variant ---
+                is_alt_format = "Transaction date" in report_df.columns
+
+                if is_alt_format:
+                    # ---- ALTERNATE FORMAT: "Transaction date" column, clean Amount ----
+                    logger.info("Detected alternate Chase 2 format (Transaction date column)")
+                    if "Org Name" in report_df.columns:
+                        report_df["Org Name"] = report_df["Org Name"].ffill()
+                    if "Transaction date" in report_df.columns and "Amount" in report_df.columns:
+                        report_df = report_df[~(report_df["Transaction date"].isna() & report_df["Amount"].isna())]
+                    amount_list, ref_list = [], []
+                    for _, row in report_df.iterrows():
+                        raw = row.get("Amount", "")
+                        if pd.isna(raw):
                             amount_list.append(None)
                             ref_list.append("")
-                    else:
+                            continue
+                        s = str(raw).strip()
                         try:
                             amount_list.append(float(s.replace(",", "").replace("$", "")))
-                            ref_list.append(str(row.get("Memo/Description", "") or ""))
                         except (ValueError, TypeError):
                             amount_list.append(None)
+                        ref_list.append(str(row.get("Memo/Description", "") or ""))
+                    report_df = report_df.copy()
+                    report_df["Amount"] = amount_list
+                    report_df["_ref"] = ref_list
+                    report_df["Posting Date"] = report_df["Transaction date"]
+                    report_df["Description"] = report_df.apply(
+                        lambda r: f"ORG: {r.get('Org Name', '')} REF: {r.get('_ref', '')}", axis=1
+                    )
+                    report_df["Source"] = "Chase 2"
+                else:
+                    # ---- ORIGINAL FORMAT: "Date" column, Amount may contain embedded ref ----
+                    logger.info("Detected original Chase 2 format (Date column)")
+                    if "Org Name" in report_df.columns:
+                        report_df["Org Name"] = report_df["Org Name"].ffill()
+                    if "Date" in report_df.columns and "Amount" in report_df.columns:
+                        report_df = report_df[~(report_df["Date"].isna() & report_df["Amount"].isna())]
+                    amount_list, ref_list = [], []
+                    for _, row in report_df.iterrows():
+                        raw = row.get("Amount", "")
+                        if pd.isna(raw):
+                            amount_list.append(None)
                             ref_list.append("")
-                report_df = report_df.copy()
-                report_df["Amount"] = amount_list
-                report_df["_ref"] = ref_list
-                report_df["Posting Date"] = report_df["Date"]
-                report_df["Description"] = report_df.apply(
-                    lambda r: f"ORG: {r.get('Org Name', '')} REF: {r.get('_ref', '')}", axis=1
-                )
-                report_df["Source"] = "Chase 2"
+                            continue
+                        s = str(raw).strip()
+                        parts = s.split()
+                        if len(parts) >= 2:
+                            try:
+                                amount_list.append(float(parts[0].replace(",", "").replace("$", "")))
+                                ref_list.append(parts[1])
+                            except (ValueError, TypeError):
+                                amount_list.append(None)
+                                ref_list.append("")
+                        else:
+                            try:
+                                amount_list.append(float(s.replace(",", "").replace("$", "")))
+                                ref_list.append(str(row.get("Memo/Description", "") or ""))
+                            except (ValueError, TypeError):
+                                amount_list.append(None)
+                                ref_list.append("")
+                    report_df = report_df.copy()
+                    report_df["Amount"] = amount_list
+                    report_df["_ref"] = ref_list
+                    report_df["Posting Date"] = report_df["Date"]
+                    report_df["Description"] = report_df.apply(
+                        lambda r: f"ORG: {r.get('Org Name', '')} REF: {r.get('_ref', '')}", axis=1
+                    )
+                    report_df["Source"] = "Chase 2"
                 
                 # Report filter intentionally removed to allow matching of XXXXXX references
                 report_df = report_df[["Posting Date", "Amount", "Description", "Source"]]
